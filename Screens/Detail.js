@@ -11,14 +11,12 @@ import {
 } from 'react-native';
 import { Input, Icon } from 'react-native-elements'
 import { useState } from 'react';
-import RNLocation from 'react-native-location';
-import RNAndroidLocationEnabler from 'react-native-android-location-enabler';
 import RNGooglePlaces from 'react-native-google-places';
 import { Button } from 'react-native-paper';
 
-var Arr = []
+var pinLocations = []
 
-export default function App({ navigation }) {
+export default function App({ navigation, route }) {
 
     const [propAddress, setPropAddress] = useState('')
     const [propAddressPlaceHolder, setPropAddressPlaceHolder] = useState('Canada Street 55')
@@ -28,6 +26,7 @@ export default function App({ navigation }) {
     const [propTitlePlaceHolder, setPropTitlePlaceHolder] = useState('Your property title')
     const [propTitleChange, setPropTitleChange] = useState(false)
     const titleRef = useRef()
+
     const [propDetail, setPropDetail] = useState('')
     const [propDetailPlaceHolder, setPropDetailPlaceHolder] = useState('Enter any notes here...')
     const [propDetailChange, setPropDetailChange] = useState(false)
@@ -36,19 +35,32 @@ export default function App({ navigation }) {
     useEffect(() => {
         AsyncStorage.getItem('location').then(res => {
             if (res) {
-                Arr = JSON.parse(res)
-                console.warn('Checking Array', Arr)
+                pinLocations = JSON.parse(res)
+                console.log('Checking Array', pinLocations)
             }
         }).catch(err => {
             console.warn(err.message)
         })
-    }, [Arr])
+    }, [pinLocations])
 
     const SelectDestinationLocation = () => {
         RNGooglePlaces.openAutocompleteModal()
             .then((place) => {
                 setPropAddress(place)
             })
+    }
+
+    const addLocation = async () => {
+        console.log('saved address', propAddress.location)
+        if (propAddress) {
+            pinLocations.push(propAddress)
+            console.log('saved array', pinLocations)
+            await AsyncStorage.setItem('location', JSON.stringify(pinLocations));
+            // route.params.refresh();
+            navigation.goBack()
+        }
+        else { alert('Select Address') }
+
     }
 
     return (
@@ -148,21 +160,12 @@ export default function App({ navigation }) {
             />
             <Button
                 mode="contained"
-                onPress={() => {
-                    console.warn('saved address', propAddress.location)
-                    if (propAddress) {
-                        Arr.push(propAddress.location)
-                        console.warn('saved array', Arr)
-                        AsyncStorage.setItem('location', JSON.stringify(Arr));
-                        navigation.navigate('Maps')
-                    }
-                    else { alert('Select Address') }
-                }}
+                onPress={addLocation}
                 labelStyle={{ fontSize: 16, textAlignVertical: "center", height: 30, width: '40%', color: "#fff" }}
-                style={{
-                    borderRadius: 7,
-                    backgroundColor: "#D50320",
-                }}
+            style={{
+                borderRadius: 7,
+                backgroundColor: "#D50320",
+            }}
             >
                 Post
             </Button>

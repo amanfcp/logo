@@ -15,7 +15,12 @@ import { Icon } from "react-native-elements";
 var Arr = [];
 
 class MapNavigation extends Component {
+    constructor(props) {
+        super(props);
+        // AsyncStorage.clear()
+    }
     state = {
+        markerCount: 0,
         visible: false,
         error: "",
         loading: true,
@@ -37,43 +42,94 @@ class MapNavigation extends Component {
                 backgroundColor: '#fff'
             }}
             underlayColor="transparent"
-            onPress={() => navigation.navigate('Detail')}
+            onPress={() => navigation.navigate('Detail'
+                // , {
+                //     onGoBack: () => {
+                //         console.log('inside refresh')
+                //         AsyncStorage.getItem('location').then(res => {
+                //             if (res) {
+                //                 Arr = JSON.parse(res)
+                //                 console.log('inside refresh if')
+                //                 console.log('inside refresh if response', res)
+
+                //             }
+                //         }).catch(err => {
+                //             console.warn(err.message)
+                //         })
+                //     }
+                // }
+            )}
         />
     })
-    componentWillMount() {
-        AsyncStorage.getItem('location').then(res => {
-            if (res) {
-                Arr = JSON.parse(res)
-                console.warn('saved array', Arr)
-            }
-        }).catch(err => {
-            console.warn(err.message)
-        })
+
+    // refresh = () => {
+    //     AsyncStorage.getItem('location').then(res => {
+    //         console.log('inside refresh')
+    //         if (res) {
+    //             Arr = JSON.parse(res)
+    //             this.setState({ markerCount: this.state.markerCount + 1 })
+    //             console.log('inside refresh if')
+    //             console.log('inside refresh if response', res)
+
+    //         }
+    //     }).catch(err => {
+    //         console.warn(err.message)
+    //     })
+    // }
+
+    // componentWillMount() {
+    //     AsyncStorage.getItem('location').then(res => {
+    //         if (res) {
+    //             Arr = JSON.parse(res)
+    //             console.log('Previously saved Locations', Arr)
+    //         }
+    //     }).catch(err => {
+    //         console.warn(err.message)
+    //     })
+    // }
+
+    componentWillUnmount() {
+        this.willFocusSubscription.remove()
     }
+
     componentDidMount() {
-        AsyncStorage.getItem('location').then(res => {
-            if (res) {
-                Arr = JSON.parse(res)
-                console.warn('saved array', Arr)
-            }
-        }).catch(err => {
-            console.warn(err.message)
+        console.log('inside component did mount')
+        this.willFocusSubscription = this.props.navigation.addListener('focus', () => {
+            console.log('inside component did mount')
+            AsyncStorage.getItem('location').then(res => {
+                if (res) {
+                    this.forceUpdate(() => {
+                        Arr = JSON.parse(res)
+                        console.log('inside component did mount if')
+                        console.log('inside component did mount if response', res)
+                    })
+                }
+            }).catch(err => {
+                console.warn(err.message)
+            })
         })
     }
+
+    setPinLocation = async () => {
+        await AsyncStorage.setItem('location', JSON.stringify(Arr));
+        // this.setState({ markerCount: this.state.markerCount + 1 })
+        console.log('updated Array in setPinLocation', Arr)
+    }
+
     SelectDestinationLocation = () => {
         RNGooglePlaces.openAutocompleteModal()
             .then(async (place) => {
-
                 // await AsyncStorage.setItem('location', JSON.stringify([AsyncStorage.getItem('location'), place.location]), err => console.warn(err))
                 // AsyncStorage.getItem('location').then(res => {
                 //     console.warn('Locations', res)
                 // }).catch(err => { console.warn(err.message) })
-
-                Arr.push(place.location);
-                AsyncStorage.setItem('location', JSON.stringify(Arr));
-                AsyncStorage.getItem('location').then(res => {
-                    console.warn('Locations', res)
-                }).catch(err => { console.warn(err.message) })
+                console.log('place ', place)
+                Arr.push(place);
+                this.setPinLocation();
+                // AsyncStorage.setItem('location', JSON.stringify(Arr));
+                // AsyncStorage.getItem('location').then(res => {
+                //     console.warn('Locations', res)
+                // }).catch(err => { console.warn(err.message) })
                 this.setState({ Destination: [...this.state.Destination, place] })
                 this.MapView.animateToRegion({
                     latitude: place.location.latitude,
@@ -88,21 +144,30 @@ class MapNavigation extends Component {
     }
 
     render() {
+        // { this.props.navigation.setParams({ refresh: this.refresh }) }
         return (
             <View style={{ flex: 1 }}>
                 <View style={{ flex: 1 }}>
                     <MapView
+                        initialRegion={{
+                            latitude: 24.926294,
+                            longitude: 67.022095,
+                            latitudeDelta: 0.05,
+                            longitudeDelta: 0.05,
+                        }}
                         ref={component => this.MapView = component}
                         style={{ flex: 1 }}
                     >
                         {
                             Arr.map(item =>
                                 <Marker
+                                    identifier={item.placeID}
+                                    key={item.placeID}
                                     title={item.name}
                                     coordinate={
                                         {
-                                            latitude: item.latitude,
-                                            longitude: item.longitude,
+                                            latitude: item.location.latitude,
+                                            longitude: item.location.longitude,
                                             latitudeDelta: 0.015,
                                             longitudeDelta: 0.015
                                         }
@@ -137,11 +202,15 @@ class MapNavigation extends Component {
                             />
                         </TouchableOpacity>
                         <Button
+                            style={{
+                                backgroundColor: '#ccc',
+                                width: 100,
+                                alignSelf: 'flex-end'
+                            }}
                             onPress={() => {
                                 AsyncStorage.clear()
-                                Arr=[]
-                            }
-                            }
+                                Arr = []
+                            }}
                         >
                             Remove
                         </Button>

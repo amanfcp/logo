@@ -27,7 +27,9 @@ class MapNavigation extends Component {
         MyLocModal: false,
         DestModal: false,
         YourLocation: null,
-        Destination: []
+        Destination: [],
+        latDelta: 0.015,
+        longDelta: 0.015,
     }
 
     static setOptions = ({ navigation }) => ({
@@ -42,67 +44,19 @@ class MapNavigation extends Component {
                 backgroundColor: '#fff'
             }}
             underlayColor="transparent"
-            onPress={() => navigation.navigate('Detail'
-                // , {
-                //     onGoBack: () => {
-                //         console.log('inside refresh')
-                //         AsyncStorage.getItem('location').then(res => {
-                //             if (res) {
-                //                 Arr = JSON.parse(res)
-                //                 console.log('inside refresh if')
-                //                 console.log('inside refresh if response', res)
-
-                //             }
-                //         }).catch(err => {
-                //             console.warn(err.message)
-                //         })
-                //     }
-                // }
-            )}
+            onPress={() => navigation.navigate('Detail')}
         />
     })
-
-    // refresh = () => {
-    //     AsyncStorage.getItem('location').then(res => {
-    //         console.log('inside refresh')
-    //         if (res) {
-    //             Arr = JSON.parse(res)
-    //             this.setState({ markerCount: this.state.markerCount + 1 })
-    //             console.log('inside refresh if')
-    //             console.log('inside refresh if response', res)
-
-    //         }
-    //     }).catch(err => {
-    //         console.warn(err.message)
-    //     })
-    // }
-
-    // componentWillMount() {
-    //     AsyncStorage.getItem('location').then(res => {
-    //         if (res) {
-    //             Arr = JSON.parse(res)
-    //             console.log('Previously saved Locations', Arr)
-    //         }
-    //     }).catch(err => {
-    //         console.warn(err.message)
-    //     })
-    // }
 
     componentWillUnmount() {
         this.willFocusSubscription.remove()
     }
 
     componentDidMount() {
-        console.log('inside component did mount')
         this.willFocusSubscription = this.props.navigation.addListener('focus', () => {
-            console.log('inside component did mount')
             AsyncStorage.getItem('location').then(res => {
                 if (res) {
-                    this.forceUpdate(() => {
-                        Arr = JSON.parse(res)
-                        console.log('inside component did mount if')
-                        console.log('inside component did mount if response', res)
-                    })
+                    Arr = JSON.parse(res)
                 }
             }).catch(err => {
                 console.warn(err.message)
@@ -112,39 +66,52 @@ class MapNavigation extends Component {
 
     setPinLocation = async () => {
         await AsyncStorage.setItem('location', JSON.stringify(Arr));
-        // this.setState({ markerCount: this.state.markerCount + 1 })
-        console.log('updated Array in setPinLocation', Arr)
+    }
+
+    onZoomIn = () => {
+        this.MapView.animateToRegion({
+            latitude: Arr[Arr.length - 1].location.latitude,
+            longitude: Arr[Arr.length - 1].location.longitude,
+            latitudeDelta: this.state.latDelta / 10,
+            longitudeDelta: this.state.longDelta / 10
+        })
+        this.setState({
+            latDelta: this.state.latDelta / 10,
+            longDelta: this.state.longDelta / 10
+        })
+    }
+
+    onZoomOut = () => {
+        this.MapView.animateToRegion({
+            latitude: Arr[Arr.length - 1].location.latitude,
+            longitude: Arr[Arr.length - 1].location.longitude,
+            latitudeDelta: this.state.latDelta * 10,
+            longitudeDelta: this.state.longDelta * 10
+        })
+        this.setState({
+            latDelta: this.state.latDelta * 10,
+            longDelta: this.state.longDelta * 10
+        })
     }
 
     SelectDestinationLocation = () => {
         RNGooglePlaces.openAutocompleteModal()
             .then(async (place) => {
-                // await AsyncStorage.setItem('location', JSON.stringify([AsyncStorage.getItem('location'), place.location]), err => console.warn(err))
-                // AsyncStorage.getItem('location').then(res => {
-                //     console.warn('Locations', res)
-                // }).catch(err => { console.warn(err.message) })
-                console.log('place ', place)
                 Arr.push(place);
                 this.setPinLocation();
-                // AsyncStorage.setItem('location', JSON.stringify(Arr));
-                // AsyncStorage.getItem('location').then(res => {
-                //     console.warn('Locations', res)
-                // }).catch(err => { console.warn(err.message) })
                 this.setState({ Destination: [...this.state.Destination, place] })
                 this.MapView.animateToRegion({
                     latitude: place.location.latitude,
                     longitude: place.location.longitude,
-                    latitudeDelta: 0.015,
-                    longitudeDelta: 0.015
+                    latitudeDelta: this.state.latDelta,
+                    longitudeDelta: this.state.longDelta,
                 }, 1000)
             })
             .catch(error => {
                 this.setState({ error: error.message, visible: true })
             });
     }
-
     render() {
-        // { this.props.navigation.setParams({ refresh: this.refresh }) }
         return (
             <View style={{ flex: 1 }}>
                 <View style={{ flex: 1 }}>
@@ -152,8 +119,8 @@ class MapNavigation extends Component {
                         initialRegion={{
                             latitude: 24.926294,
                             longitude: 67.022095,
-                            latitudeDelta: 0.05,
-                            longitudeDelta: 0.05,
+                            latitudeDelta: this.state.latDelta,
+                            longitudeDelta: this.state.longDelta,
                         }}
                         ref={component => this.MapView = component}
                         style={{ flex: 1 }}
@@ -168,8 +135,8 @@ class MapNavigation extends Component {
                                         {
                                             latitude: item.location.latitude,
                                             longitude: item.location.longitude,
-                                            latitudeDelta: 0.015,
-                                            longitudeDelta: 0.015
+                                            latitudeDelta: this.state.latDelta,
+                                            longitudeDelta: this.state.longDelta,
                                         }
                                     }
                                 />
@@ -201,7 +168,7 @@ class MapNavigation extends Component {
                                 icon="map-marker"
                             />
                         </TouchableOpacity>
-                        <Button
+                        {/* <Button
                             style={{
                                 backgroundColor: '#ccc',
                                 width: 100,
@@ -213,7 +180,29 @@ class MapNavigation extends Component {
                             }}
                         >
                             Remove
-                        </Button>
+                        </Button> */}
+                        <Icon
+                            underlayColor='transparent'
+                            iconStyle={{
+                                alignSelf: 'flex-end'
+                            }}
+                            onPress={this.onZoomIn}
+                            name='plussquareo'
+                            type='antdesign'
+                            size={40}
+                            color='#222'
+                        />
+                        <Icon
+                            underlayColor='transparent'
+                            iconStyle={{
+                                alignSelf: 'flex-end'
+                            }}
+                            onPress={this.onZoomOut}
+                            name='minussquareo'
+                            type='antdesign'
+                            size={40}
+                            color='#222'
+                        />
                     </View>
                 </View>
                 <Snackbar

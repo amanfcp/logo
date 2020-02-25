@@ -36,7 +36,6 @@ export default function App({ navigation, route }) {
         AsyncStorage.getItem('location').then(res => {
             if (res) {
                 pinLocations = JSON.parse(res)
-                console.log('Checking Array', pinLocations)
             }
         }).catch(err => {
             console.warn(err.message)
@@ -51,12 +50,9 @@ export default function App({ navigation, route }) {
     }
 
     const addLocation = async () => {
-        console.log('saved address', propAddress.location)
         if (propAddress) {
             pinLocations.push(propAddress)
-            console.log('saved array', pinLocations)
             await AsyncStorage.setItem('location', JSON.stringify(pinLocations));
-            // route.params.refresh();
             navigation.goBack()
         }
         else { alert('Select Address') }
